@@ -9,6 +9,7 @@ import sys
 import shlex
 import subprocess
 import time
+import Queue
 
 ENCODING = 'UTF-8'
 
@@ -18,7 +19,7 @@ class ProcRun(object):
     Wrapper around subprocess.Popen to treat execution as a generator or text.
     """
 
-    def __init__(self, cmd, cwd, log_path):
+    def __init__(self, cmd, cwd, log_path, q):
         """ Initialize a """
         self.cmd = cmd
         self.cwd = cwd
@@ -31,6 +32,7 @@ class ProcRun(object):
         self.time_format = '%Y-%m-%d-%H:%M:%S'
         self.stdout_lines = []
         self.stderr_lines = []
+        self.q = q
 
     def open_log(self, user):
         """Open the command log file """
@@ -44,7 +46,7 @@ class ProcRun(object):
         """Return [] if args is None, the array of args or an array of arguments split from a string. """
         if args is not None:
             if len(args):
-                if isinstance(args, str):
+                if isinstance(args, str) or isinstance(args, unicode):
                     return shlex.split(args)
                 if isinstance(args, list):
                     return args
@@ -66,24 +68,27 @@ class ProcRun(object):
         self._exec_log.write(data.encode(ENCODING))
         return data
 
-    def run_async(self, user, args=None, data=None, env={}, save=True):
+    def run_async(self, user, arg_str=None, data=None, env={}, save=True):
         """ Run a the command asynchronously """
         # Get the environment, or set the environment
         environ = dict(os.environ).update(env or {})
 
         # Create the array of arguments for the subprocess call
-        cmd_args = [os.path.join(self.cwd, self.cmd)] + self.expand_args(args)
+        cmd_args = [self.cmd] + self.expand_args(arg_str)
 
         # Open the log file
         self.start_log(user, cmd_args)
+        print self.cmd
+        print arg_str
+        print str(cmd_args)
 
-        self.process = subprocess.Popen(self.cmd,
+        self.process = subprocess.Popen(cmd_args,
                                         universal_newlines=True,
                                         shell=False,
                                         env=environ,
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
                                         bufsize=0, )
 
         while True:
@@ -92,11 +97,12 @@ class ProcRun(object):
                 # Process is done
                 break
             if output:
-                yield self.write_log(output)
+                self.q.put(self.write_log(output))
         # Capture the return code
         self.rc = self.process.poll()
         # Done with the log
         self.end_log()
+        self.q.put(None)
 
     def run(self, user, args=None, data=None, env={}, save=True):
         """ Run a command, giving arguments, and potentially STDIN """

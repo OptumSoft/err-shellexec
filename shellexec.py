@@ -9,15 +9,18 @@ import subprocess
 import time
 import datetime
 import shlex
+import threading
+import time
+import Queue
 
 import procrun
 
 # Logger for the shell_exec command
 log = logging.getLogger("shell_exec")
 CONFIG_TEMPLATE = {
-    'SCRIPT_PATH': './plugins/err-shellexec/handlers/',
-    'SCRIPT_LOGS': './plugins/err-shellexec/handlers/logs',
-    'NOTIFY_STRING': 'NOTIFY:',
+    'SCRIPT_PATH': u'./extra_plugins/err-shellexec/handlers/',
+    'SCRIPT_LOGS': u'./extra_plugins/err-shellexec/handlers/logs',
+    'NOTIFY_STRING': u'NOTIFY:',
 }
 
 def status_to_string(exit_code):
@@ -132,18 +135,32 @@ class ShellExec(BotPlugin):
 
         def new_method(self, msg, args, command_name=command_name, notify_string=self.config['NOTIFY_STRING']):
             # Get who ran the command
-            user = msg.frm.node
+            user = msg.frm.userid
             # The full command to run
             os_cmd = join(self.command_path, command_name + ".sh")
-            proc = procrun.ProcRun(os_cmd, self.command_path, self.command_logs_path)
-            for line in proc.run_async(user, args=args):
-                # Check to see if anything matches the NOTIFY_STRING
-                if line.find(notify_string) >= 0:
-                    # Remove the NOTIFY_STRING part
-                    self.log.debug("Sending Notification")
-                    yield line.strip().replace(notify_string, '')
-                else:
-                    self.log.debug(line.strip())
+            q = Queue.Queue()
+            proc = procrun.ProcRun(os_cmd, self.command_path, self.command_logs_path, q)
+	    print "args: " + str(args)
+            t = threading.Thread(target=procrun.ProcRun.run_async,
+                args=(proc, user), kwargs={'arg_str':args})
+            t.start()
+	    time.sleep(0.5)
+            while t.isAlive() or not q.empty():
+                lines = []
+                while not q.empty():
+                    line = q.get()
+                    if line is None:
+                        break
+                    lines.append(line.strip())
+                while len(lines) > 0:
+		    chunk = lines[:100]
+                    buf = '\`\`\`' + '\n'.join(chunk) + '\`\`\`'
+                    yield buf
+		    lines = lines[100:]
+                    self.log.debug(buf)
+		else:
+                    time.sleep(3)
+            t.join()
             yield "[{}] completed {}".format(command_name, status_to_string(proc.rc))
 
         self.log.debug("Updating metadata on command {} type {}".format(command_name, type(command_name)))
