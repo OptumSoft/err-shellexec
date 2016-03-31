@@ -33,11 +33,11 @@ class ShellExec(BotPlugin):
     """
     min_err_version = '3.0.0'  # Optional, but recommended
 
-    def __init__(self):
+    def __init__(self, bot):
         """
         Constructor
         """
-        super(ShellExec, self).__init__()
+        super(ShellExec, self).__init__(bot)
         self.dynamic_plugin = None
 
     def activate(self):
