@@ -97,7 +97,8 @@ class ProcRun(object):
                 # Process is done
                 break
             if output:
-                self.q.put(self.write_log(output))
+                self.write_log(output)
+                self.q.put(output)
         # Capture the return code
         self.rc = self.process.poll()
         # Done with the log

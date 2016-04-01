@@ -5,6 +5,7 @@ from os import listdir
 from os.path import isfile, join
 from itertools import chain
 import logging
+import hashlib
 import subprocess
 import time
 import datetime
@@ -17,16 +18,28 @@ import procrun
 
 # Logger for the shell_exec command
 log = logging.getLogger("shell_exec")
-CONFIG_TEMPLATE = {
-    'SCRIPT_PATH': u'./extra_plugins/err-shellexec/handlers/',
-    'SCRIPT_LOGS': u'./extra_plugins/err-shellexec/handlers/logs',
-    'NOTIFY_STRING': u'NOTIFY:',
-}
+SCRIPT_PATH = u'./extra_plugins/err-shellexec/handlers/'
+SCRIPT_LOGS = u'./extra_plugins/err-shellexec/handlers/logs'
 
 def status_to_string(exit_code):
     if exit_code == 0:
         return "successfully"
     return "unsuccessfully"
+
+def slack_upload(self, msg, buf):
+    if msg.is_group:
+        to_channel_id = msg.to.id
+    else:
+        to_channel_id = msg.to.channelid
+        if to_channel_id.startswith('C'):
+            log.debug("This is a divert to private msgage, sending it directly to the user.")
+            to_channel_id = self.get_im_channel(self.username_to_userid(msg.to.username))
+    self._bot.api_call('files.upload', data={
+        'channels': [to_channel_id],
+        'content': buf,
+        'filename': hashlib.sha224(buf).hexdigest(),
+        'filetype': 'text',
+})
 
 class ShellExec(BotPlugin):
     """
@@ -48,8 +61,7 @@ class ShellExec(BotPlugin):
         Activate this plugin,
         """
         super(ShellExec, self).activate()
-        if self.config is not None:
-            self._load_shell_commands()
+        self._load_shell_commands()
 
     def deactivate(self):
         """
@@ -57,12 +69,6 @@ class ShellExec(BotPlugin):
         """
         super(ShellExec, self).deactivate()
         self._bot.remove_commands_from(self.dynamic_plugin)
-
-    def get_configuration_template(self):
-        """
-        Defines the configuration structure this plugin supports
-        """
-        return CONFIG_TEMPLATE
 
     @botcmd
     def cmdunload(self, msg, args):
@@ -81,14 +87,11 @@ class ShellExec(BotPlugin):
         current set of scripts.
         """
         self.log.debug("Reloading ShellExec Scripts")
-        if self.config is not None:
-            yield "Checking for available commands."
-            self._bot.remove_commands_from(self.dynamic_plugin)
-            self.dynamic_plugin = None
-            self._load_shell_commands()
-            yield "Done loading commands."
-        else:
-            yield "Wouldn't you like to configure the ShellExec command instead."
+        yield "Checking for available commands."
+        self._bot.remove_commands_from(self.dynamic_plugin)
+        self.dynamic_plugin = None
+        self._load_shell_commands()
+        yield "Done loading commands."
 
     def _load_shell_commands(self):
         """
@@ -97,7 +100,7 @@ class ShellExec(BotPlugin):
         Once done, generate an object out of a dictionary of the dynamically created
         methods and add that to the bot.
         """
-        script_path = self.config['SCRIPT_PATH']
+        script_path = SCRIPT_PATH
         self.log.info("Loading scripts from {}".format(script_path))
         # Read the files
         files = [f for f in listdir(script_path) if isfile(join(script_path, f)) and f.endswith('.sh')]
@@ -111,8 +114,9 @@ class ShellExec(BotPlugin):
 
         plugin_class = type("ShellCmd", (BotPlugin, ), commands)
         plugin_class.__errdoc__ = 'The ShellCmd plugin is created and managed by the ShellExec plugin.'
-        plugin_class.command_path = self.config['SCRIPT_PATH']
-        plugin_class.command_logs_path = self.config['SCRIPT_LOGS']
+        plugin_class.command_path = SCRIPT_PATH
+        plugin_class.command_logs_path = SCRIPT_LOGS
+        plugin_class.slack_upload = slack_upload
 
         self.dynamic_plugin = plugin_class(self._bot)
         self.log.debug("Registering Dynamic Plugin: %s" % (self.dynamic_plugin))
@@ -123,7 +127,7 @@ class ShellExec(BotPlugin):
         Run the script with the --help option and capture the output to be used
         as its help text in chat.
         """
-        os_cmd = join(self.config['SCRIPT_PATH'], command_name + ".sh")
+        os_cmd = join(SCRIPT_PATH, command_name + ".sh")
         log.debug("Getting help info for '{}'".format(os_cmd))
         return subprocess.check_output([os_cmd, "--help"]).decode('utf-8')
 
@@ -133,38 +137,43 @@ class ShellExec(BotPlugin):
         """
         self.log.debug("Adding shell command '{}'".format(command_name))
 
-        def new_method(self, msg, args, command_name=command_name, notify_string=self.config['NOTIFY_STRING']):
+        def new_method(self, msg, args, command_name=command_name):
             # Get who ran the command
             user = msg.frm.userid
             # The full command to run
             os_cmd = join(self.command_path, command_name + ".sh")
             q = Queue.Queue()
             proc = procrun.ProcRun(os_cmd, self.command_path, self.command_logs_path, q)
-	    print "args: " + str(args)
+            print "args: " + str(args)
             t = threading.Thread(target=procrun.ProcRun.run_async,
                 args=(proc, user), kwargs={'arg_str':args})
             t.start()
-	    time.sleep(0.5)
+            time.sleep(0.5)
+            snippets = False
             while t.isAlive() or not q.empty():
                 lines = []
                 while not q.empty():
                     line = q.get()
                     if line is None:
                         break
-                    lines.append(line.strip())
+                    lines.append(line.rstrip())
                 while len(lines) > 0:
-		    chunk = lines[:100]
-                    buf = '\`\`\`' + '\n'.join(chunk) + '\`\`\`'
-                    yield buf
-		    lines = lines[100:]
-                    self.log.debug(buf)
-		else:
-                    time.sleep(3)
+                    if len(lines) >= 25:
+                        snippets = True
+                    chunk = lines[:100]
+                    if snippets:
+                       self.slack_upload(msg,'\n'.join(chunk))
+                    else:
+                       buf = '\`\`\`' + '\n'.join(chunk) + '\`\`\`'
+                       self.log.debug(buf)
+                       yield buf
+                    lines = lines[100:]
+                time.sleep(2)
             t.join()
             yield "[{}] completed {}".format(command_name, status_to_string(proc.rc))
 
         self.log.debug("Updating metadata on command {} type {}".format(command_name, type(command_name)))
-        new_method.__name__ = command_name
+        new_method.__name__ = str(command_name)
         new_method.__doc__ = self._get_command_help(command_name)
 
         # Decorate the method
