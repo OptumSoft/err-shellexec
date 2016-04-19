@@ -166,7 +166,7 @@ class ShellExec(BotPlugin):
                     else:
                        buf = '\`\`\`' + '\n'.join(chunk) + '\`\`\`'
                        self.log.debug(buf)
-                       yield buf
+                       yield buf.decode('utf-8')
                     lines = lines[100:]
                 time.sleep(2)
             t.join()

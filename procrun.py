@@ -65,7 +65,7 @@ class ProcRun(object):
 
     def write_log(self, data):
         """Write a row of data to the command log"""
-        self._exec_log.write(data.encode(ENCODING))
+        self._exec_log.write(data.decode(ENCODING).encode(ENCODING))
         return data
 
     def run_async(self, user, arg_str=None, data=None, env={}, save=True):
