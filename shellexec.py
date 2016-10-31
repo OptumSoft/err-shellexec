@@ -35,7 +35,7 @@ def slack_upload(self, msg, buf):
             log.debug("This is a divert to private msgage, sending it directly to the user.")
             to_channel_id = self.get_im_channel(self.username_to_userid(msg.to.username))
     self._bot.api_call('files.upload', data={
-        'channels': [to_channel_id],
+        'channels': to_channel_id,
         'content': buf,
         'filename': hashlib.sha224(buf).hexdigest(),
         'filetype': 'text',
