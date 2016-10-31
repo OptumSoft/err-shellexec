@@ -18,8 +18,8 @@ import procrun
 
 # Logger for the shell_exec command
 log = logging.getLogger("shell_exec")
-SCRIPT_PATH = u'./extra_plugins/err-shellexec/handlers/'
-SCRIPT_LOGS = u'./extra_plugins/err-shellexec/handlers/logs'
+SCRIPT_PATH = u'/opt/errbot/cmds'
+SCRIPT_LOGS = u'/var/log/errbot/shellexec'
 
 def status_to_string(exit_code):
     if exit_code == 0:
