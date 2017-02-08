@@ -9,7 +9,7 @@ import sys
 import shlex
 import subprocess
 import time
-import Queue
+import queue
 
 ENCODING = 'UTF-8'
 
@@ -46,7 +46,7 @@ class ProcRun(object):
         """Return [] if args is None, the array of args or an array of arguments split from a string. """
         if args is not None:
             if len(args):
-                if isinstance(args, str) or isinstance(args, unicode):
+                if isinstance(args, str) or isinstance(args, str):
                     return shlex.split(args)
                 if isinstance(args, list):
                     return args
@@ -78,9 +78,9 @@ class ProcRun(object):
 
         # Open the log file
         self.start_log(user, cmd_args)
-        print self.cmd
-        print arg_str
-        print str(cmd_args)
+        print(self.cmd)
+        print(arg_str)
+        print(str(cmd_args))
 
         self.process = subprocess.Popen(cmd_args,
                                         universal_newlines=True,

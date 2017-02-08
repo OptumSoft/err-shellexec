@@ -12,14 +12,14 @@ import datetime
 import shlex
 import threading
 import time
-import Queue
+import queue
 
 import procrun
 
 # Logger for the shell_exec command
 log = logging.getLogger("shell_exec")
-SCRIPT_PATH = u'/opt/errbot/cmds'
-SCRIPT_LOGS = u'/var/log/errbot/shellexec'
+SCRIPT_PATH = '/opt/errbot/cmds'
+SCRIPT_LOGS = '/var/log/errbot/shellexec'
 
 def status_to_string(exit_code):
     if exit_code == 0:
@@ -142,9 +142,9 @@ class ShellExec(BotPlugin):
             user = msg.frm.userid
             # The full command to run
             os_cmd = join(self.command_path, command_name + ".sh")
-            q = Queue.Queue()
+            q = queue.Queue()
             proc = procrun.ProcRun(os_cmd, self.command_path, self.command_logs_path, q)
-            print "args: " + str(args)
+            print("args: " + str(args))
             t = threading.Thread(target=procrun.ProcRun.run_async,
                 args=(proc, user), kwargs={'arg_str':args})
             t.start()
