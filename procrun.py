@@ -33,6 +33,7 @@ class ProcRun(object):
         self.stdout_lines = []
         self.stderr_lines = []
         self.q = q
+        self.rc = 0
 
     def open_log(self, user):
         """Open the command log file """
