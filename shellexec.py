@@ -37,7 +37,7 @@ def slack_upload(self, msg, buf):
     self._bot.api_call('files.upload', data={
         'channels': to_channel_id,
         'content': buf,
-        'filename': hashlib.sha224(buf).hexdigest(),
+        'filename': hashlib.sha224(buf.encode('utf-8')).hexdigest(),
         'filetype': 'text',
 })
 
