@@ -53,8 +53,7 @@ class ProcRun(object):
     def start_log(self, user, cmd_args):
         """Open the command log"""
         self._exec_log = self.open_log(user)
-        self._exec_log.write("Starting Command [{}] as [{}]\n".format(" ".join(
-            cmd_args), user))
+        self._exec_log.write(bytes("Starting Command [{}] as [{}]\n".format(" ".join(cmd_args), user)), 'UTF-8')
 
     def end_log(self):
         """Close the command log"""
@@ -63,7 +62,7 @@ class ProcRun(object):
 
     def write_log(self, data):
         """Write a row of data to the command log"""
-        self._exec_log.write(data)
+        self._exec_log.write(bytes(data, 'UTF-8'))
         return data
 
     def run_async(self, user, arg_str=None, data=None, env={}, save=True):
