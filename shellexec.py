@@ -129,7 +129,7 @@ class ShellExec(BotPlugin):
         """
         os_cmd = join(SCRIPT_PATH, command_name + ".sh")
         log.debug("Getting help info for '{}'".format(os_cmd))
-        return subprocess.check_output([os_cmd, "--help"]).decode('utf-8')
+        return subprocess.check_output([os_cmd, "--help"])
 
     def _create_method(self, command_name):
         """
@@ -166,7 +166,7 @@ class ShellExec(BotPlugin):
                     else:
                        buf = '\`\`\`' + '\n'.join(chunk) + '\`\`\`'
                        self.log.debug(buf)
-                       yield buf.decode('utf-8')
+                       yield buf
                     lines = lines[100:]
                 time.sleep(2)
             t.join()

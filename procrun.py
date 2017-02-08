@@ -11,9 +11,6 @@ import subprocess
 import time
 import queue
 
-ENCODING = 'UTF-8'
-
-
 class ProcRun(object):
     """
     Wrapper around subprocess.Popen to treat execution as a generator or text.
@@ -57,7 +54,7 @@ class ProcRun(object):
         """Open the command log"""
         self._exec_log = self.open_log(user)
         self._exec_log.write("Starting Command [{}] as [{}]\n".format(" ".join(
-            cmd_args), user).encode(ENCODING))
+            cmd_args), user))
 
     def end_log(self):
         """Close the command log"""
@@ -66,7 +63,7 @@ class ProcRun(object):
 
     def write_log(self, data):
         """Write a row of data to the command log"""
-        self._exec_log.write(data.decode(ENCODING).encode(ENCODING))
+        self._exec_log.write(data)
         return data
 
     def run_async(self, user, arg_str=None, data=None, env={}, save=True):
