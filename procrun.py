@@ -53,7 +53,7 @@ class ProcRun(object):
     def start_log(self, user, cmd_args):
         """Open the command log"""
         self._exec_log = self.open_log(user)
-        self._exec_log.write(bytes("Starting Command [{}] as [{}]\n".format(" ".join(cmd_args), user)), 'UTF-8')
+        self._exec_log.write(bytes("Starting Command [{}] as [{}]\n".format(" ".join(cmd_args), user), 'UTF-8'))
 
     def end_log(self):
         """Close the command log"""
