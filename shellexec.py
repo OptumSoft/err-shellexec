@@ -139,14 +139,15 @@ class ShellExec(BotPlugin):
 
         def new_method(self, msg, args, command_name=command_name):
             # Get who ran the command
-            user = msg.frm.nick
+            user = msg.frm.userid
+            username = msg.frm.nick
             # The full command to run
             os_cmd = join(self.command_path, command_name + ".sh")
             q = queue.Queue()
             proc = procrun.ProcRun(os_cmd, self.command_path, self.command_logs_path, q)
             print("args: " + str(args))
             t = threading.Thread(target=procrun.ProcRun.run_async,
-                args=(proc, user), kwargs={'arg_str':args})
+                args=(proc, username), kwargs={'arg_str':args})
             t.start()
             time.sleep(0.5)
             snippets = False
