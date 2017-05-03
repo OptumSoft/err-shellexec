@@ -70,8 +70,11 @@ class ProcRun(object):
         # Get the environment, or set the environment
         environ = dict(os.environ).update(env or {})
 
+        if self.cmd == "/opt/errbot/cmds/tcmversion.sh":
+            cmd_args = [self.cmd, user] + self.expand_args(arg_str)
+        else:
+            cmd_args = [self.cmd] + self.expand_args(arg_str)
         # Create the array of arguments for the subprocess call
-        cmd_args = [self.cmd] + self.expand_args(arg_str)
 
         # Open the log file
         self.start_log(user, cmd_args)
