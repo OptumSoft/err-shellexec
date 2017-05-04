@@ -67,14 +67,14 @@ class ProcRun(object):
 
     def run_async(self, user, arg_str=None, data=None, env={}, save=True):
         """ Run a the command asynchronously """
-        env['SLACK_USER'] = user
+        env['SLACK_USERNAME'] = user
         # Get the environment, or set the environment
         environ = dict(os.environ).copy()
         environ.update(env or {})
 
         # Create the array of arguments for the subprocess call
         cmd_args = [self.cmd] + self.expand_args(arg_str)
-        
+
         # Open the log file
         self.start_log(user, cmd_args)
         print(self.cmd)
