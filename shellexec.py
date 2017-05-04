@@ -140,6 +140,7 @@ class ShellExec(BotPlugin):
         def new_method(self, msg, args, command_name=command_name):
             # Get who ran the command
             user = msg.frm.userid
+            # Get the nick name of the user 
             username = msg.frm.nick
             # The full command to run
             os_cmd = join(self.command_path, command_name + ".sh")
